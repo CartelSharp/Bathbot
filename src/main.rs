@@ -19,7 +19,7 @@ use crate::scraper::Scraper;
 use commands::{fun::*, osu::*, streams::*, utility::*};
 use database::MySQL;
 use events::Handler;
-use streams::Twitch;
+use streams::{Mixer, Twitch};
 use structs::Osu;
 use structs::*;
 pub use util::{discord::get_member, Error};
@@ -97,7 +97,7 @@ async fn main() {
         .await
         .unwrap_or_else(|why| panic!("Could not create Scraper: {}", why));
 
-    // Stream tracking
+    // Twitch tracking
     let twitch_users = mysql
         .get_twitch_users()
         .unwrap_or_else(|why| panic!("Could not get twitch_users: {}", why));
@@ -112,6 +112,14 @@ async fn main() {
                 .await
                 .unwrap_or_else(|why| panic!("Could not create Twitch: {}", why)),
         )
+    } else {
+        None
+    };
+
+    // Mixer tracking
+    let mixer_client_id = env::var("MIXER_CLIENT_ID").expect("Could not load MIXER_CLIENT_ID");
+    let mixer = if WITH_STREAM_TRACK {
+        Some(Mixer::new(&mixer_client_id))
     } else {
         None
     };
@@ -185,6 +193,9 @@ async fn main() {
         data.insert::<OnlineTwitch>(HashSet::new());
         if let Some(twitch) = twitch {
             data.insert::<Twitch>(twitch);
+        }
+        if let Some(mixer) = mixer {
+            data.insert::<Mixer>(mixer);
         }
         data.insert::<Guilds>(guilds);
         data.insert::<BgGames>(HashMap::new());

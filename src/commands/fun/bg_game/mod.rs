@@ -205,6 +205,7 @@ async fn stats(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
+#[aliases("leaderboard", "lb")]
 async fn ranking(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let global = msg.guild_id.is_none()
         || args

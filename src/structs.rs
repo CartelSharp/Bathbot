@@ -2,7 +2,7 @@ use crate::{
     commands::fun::BackGroundGame,
     database::{Guild as GuildDB, MySQL, StreamTrack},
     scraper::Scraper,
-    streams::Twitch,
+    streams::{Mixer, Twitch},
 };
 
 use chrono::{DateTime, Utc};
@@ -81,4 +81,8 @@ impl TypeMapKey for Guilds {
 pub struct BgGames;
 impl TypeMapKey for BgGames {
     type Value = HashMap<ChannelId, BackGroundGame>;
+}
+
+impl TypeMapKey for Mixer {
+    type Value = Mixer;
 }
