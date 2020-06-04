@@ -22,6 +22,8 @@ pub type WsStream = WebSocketStream<
 >;
 type Result<T> = std::result::Result<T, Error>;
 
+const TIMEOUT: Duration = Duration::from_secs(10);
+
 #[async_trait]
 pub trait ReceiverExt {
     async fn recv_json(&mut self) -> Result<Option<SocketResponse>>;
@@ -36,9 +38,12 @@ pub trait SenderExt {
 #[async_trait]
 impl ReceiverExt for SplitStream<WsStream> {
     async fn recv_json(&mut self) -> Result<Option<SocketResponse>> {
-        const TIMEOUT: Duration = Duration::from_millis(500);
         let ws_message = match timeout(TIMEOUT, self.next()).await {
-            Ok(v) => v.map(|v| v.ok()).flatten(),
+            Ok(Some(v)) => {
+                debug!("v: {:?}", v);
+                v.ok()
+            }
+            Ok(None) => return Err(Error::Custom("WsStream empty".to_string())),
             Err(_) => None,
         };
         convert_ws_message(ws_message)

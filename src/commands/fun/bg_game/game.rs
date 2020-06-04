@@ -263,7 +263,7 @@ impl GameData {
         if !osu_std {
             path.push("mania");
         }
-        let file_name = util::get_random_filename(previous_ids, &path)?;
+        let file_name = util::get_random_filename(previous_ids, osu_std, &path)?;
         let mut split = file_name.split('.');
         let mapset_id = u32::from_str(split.next().unwrap()).unwrap();
         debug!("Next BG mapset id: {}", mapset_id);

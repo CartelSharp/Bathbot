@@ -45,5 +45,9 @@ In case you want to get the bot running yourself to either modify a custom insta
 - Update spreadsheet (`<mostplayed`, `pagination`, ...)
 - Automize the bot setup via docker
 - Make `<common` paginated
+- Improve mode adaptation for bg game
+- Check on previous id buffer of bg game
+- Improve help msg of bg game
+- Add `Expert` difficulty for `<minesweeper`
   ### Commands
   - None as of now

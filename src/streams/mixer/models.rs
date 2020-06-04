@@ -13,7 +13,7 @@ pub struct Event {
     #[serde(rename = "type")]
     pub event_type: String,
     pub event: String,
-    /// Data associated with the event. Not that this is,
+    /// Data associated with the event. Note that this is,
     /// per the docs, completely unstructured; it depends
     /// on which kind of event was received.
     pub data: Option<Value>,
@@ -133,7 +133,7 @@ pub struct Channel {
     pub cover: Option<Resource>,
     pub badge: Option<Resource>,
     #[serde(rename = "type")]
-    pub channel_type: Option<GameType>,
+    pub game: Option<GameType>,
     // #[serde(rename = "viewersTotal")]
     // pub viewers_total: u64,
     // #[serde(rename = "viewersCurrent")]
@@ -157,23 +157,23 @@ pub struct Channel {
 
 #[derive(Debug, Default, Deserialize, PartialEq, Eq)]
 pub struct User {
-    id: u64,
-    level: u64,
-    username: String,
-    experience: u64,
+    pub id: u64,
+    pub level: u64,
+    pub username: String,
+    pub experience: u64,
     #[serde(rename = "avatarUrl")]
-    avatar_url: Option<String>,
+    pub avatar_url: Option<String>,
     // bio: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize, PartialEq, Eq)]
 pub struct GameType {
-    id: u64,
-    name: String,
+    pub id: u64,
+    pub name: String,
     #[serde(rename = "coverUrl")]
-    cover_url: Option<String>,
+    pub cover_url: Option<String>,
     #[serde(rename = "backgroundUrl")]
-    background_url: Option<String>,
+    pub background_url: Option<String>,
     // online: u32,
     // #[serde(rename = "viewersCurrent")]
     // viewers_current: u32,

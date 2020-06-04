@@ -5,9 +5,8 @@ use reqwest::{
     header::{self, HeaderMap, HeaderName, HeaderValue},
     Client, Method,
 };
-use std::time::Duration;
+use std::fmt::Write;
 
-const TIMEOUT: u64 = 10;
 const BASE_URL: &str = "https://mixer.com/api/v1";
 
 /// API wrapper around the Mixer REST API.
@@ -19,10 +18,7 @@ pub struct REST {
 impl REST {
     pub fn new(client_id: &str) -> Self {
         REST {
-            client: Client::builder()
-                .timeout(Duration::from_secs(TIMEOUT))
-                .build()
-                .unwrap(),
+            client: Client::new(),
             client_id: client_id.to_string(),
         }
     }
@@ -44,9 +40,15 @@ impl REST {
     }
 
     /// Result only contains the channels that are __currently__ streaming
-    pub async fn channels(&self, usernames: &[&str]) -> Result<Vec<Channel>, Error> {
-        assert!(!usernames.is_empty());
-        let r#where = format!("token:in:{}", usernames.join(";"));
+    pub async fn channels(&self, user_ids: &[u64]) -> Result<Vec<Channel>, Error> {
+        if user_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let mut r#where = String::from("id:in:{}");
+        for id in user_ids {
+            let _ = write!(r#where, "{};", id);
+        }
+        r#where.pop();
         let params = &[("where", r#where.as_str())];
         let response = self
             .query("GET", "channels", Some(params), None, None)
@@ -55,8 +57,15 @@ impl REST {
         Ok(channels)
     }
 
-    pub async fn channel(&self, username: &str) -> Result<Channel, Error> {
+    pub async fn channel_by_name(&self, username: &str) -> Result<Channel, Error> {
         let endpoint = format!("channels/{}", username);
+        let response = self.query("GET", &endpoint, None, None, None).await?;
+        let channel: Channel = serde_json::from_str(&response)?;
+        Ok(channel)
+    }
+
+    pub async fn channel_by_id(&self, id: u64) -> Result<Channel, Error> {
+        let endpoint = format!("channels/{}", id);
         let response = self.query("GET", &endpoint, None, None, None).await?;
         let channel: Channel = serde_json::from_str(&response)?;
         Ok(channel)

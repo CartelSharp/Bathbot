@@ -3,6 +3,7 @@ use crate::{
     database::MySQL,
     embeds::RecentData,
     pagination::{Pagination, ReactionData},
+    util::discord,
     util::globals::OSU_API_ISSUE,
     DiscordLinks, Osu,
 };
@@ -41,13 +42,15 @@ async fn recent_send(mode: GameMode, ctx: &Context, msg: &Message, args: Args) -
         match links.get(msg.author.id.as_u64()) {
             Some(name) => name.clone(),
             None => {
-                msg.channel_id
+                let response = msg
+                    .channel_id
                     .say(
-                        &ctx.http,
+                        ctx,
                         "Either specify an osu name or link your discord \
-                     to an osu profile via `<link osuname`",
+                        to an osu profile via `<link osuname`",
                     )
                     .await?;
+                discord::reaction_deletion(ctx, response, msg.author.id).await;
                 return Ok(());
             }
         }
@@ -67,12 +70,11 @@ async fn recent_send(mode: GameMode, ctx: &Context, msg: &Message, args: Args) -
         }
     };
     if scores.is_empty() {
-        msg.channel_id
-            .say(
-                &ctx.http,
-                format!("No recent plays found for user `{}`", name),
-            )
+        let response = msg
+            .channel_id
+            .say(ctx, format!("No recent plays found for user `{}`", name))
             .await?;
+        discord::reaction_deletion(ctx, response, msg.author.id).await;
         return Ok(());
     }
 
@@ -198,7 +200,7 @@ async fn recent_send(mode: GameMode, ctx: &Context, msg: &Message, args: Args) -
     // Collect reactions of author on the response
     let mut collector = response
         .await_reactions(&ctx)
-        .timeout(Duration::from_secs(45))
+        .timeout(Duration::from_secs(60))
         .author_id(msg.author.id)
         .await;
 

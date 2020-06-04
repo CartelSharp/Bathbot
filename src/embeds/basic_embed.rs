@@ -2,11 +2,11 @@ use super::util;
 use crate::{
     commands::utility::AvatarUser,
     scraper::{MostPlayedMap, ScraperScore},
-    streams::{TwitchStream, TwitchUser},
+    streams::{MixerChannel, TwitchStream, TwitchUser},
     util::{
         datetime::{date_to_string, how_long_ago, sec_to_minsec},
         discord::{self, CacheData},
-        globals::{AVATAR_URL, HOMEPAGE, MAP_THUMB_URL, SYMBOLS, TWITCH_BASE},
+        globals::{AVATAR_URL, HOMEPAGE, MAP_THUMB_URL, SYMBOLS},
         numbers::{round, round_and_comma, round_precision, with_comma_u64},
         osu,
         pp::PPProvider,
@@ -1405,13 +1405,35 @@ impl BasicEmbedData {
     }
 
     //
+    // mixer notification
+    //
+    pub fn create_stream_mixer_notif(channel: &MixerChannel) -> Self {
+        let mut result = Self::default();
+        result.author_text = Some(String::from("Now live on mixer:"));
+        result.title_text = Some(channel.name.clone());
+        result.title_url = Some(format!("https://www.mixer.com/{}", channel.name));
+        if let Some(ref avatar) = channel.user.avatar_url {
+            result.thumbnail = Some(avatar.to_owned());
+        }
+        if let Some(background) = channel
+            .game
+            .as_ref()
+            .and_then(|game| game.background_url.as_deref())
+        {
+            result.image_url = Some(background.to_owned());
+        }
+        result.description = Some(channel.title.clone());
+        result
+    }
+
+    //
     // twitch notification
     //
-    pub fn create_twitch_stream_notif(stream: &TwitchStream, user: &TwitchUser) -> Self {
+    pub fn create_stream_twitch_notif(stream: &TwitchStream, user: &TwitchUser) -> Self {
         let mut result = Self::default();
         result.author_text = Some(String::from("Now live on twitch:"));
         result.title_text = Some(stream.username.clone());
-        result.title_url = Some(format!("{}{}", TWITCH_BASE, stream.username));
+        result.title_url = Some(format!("https://www.twitch.tv/{}", stream.username));
         result.image_url = Some(stream.thumbnail_url.clone());
         result.thumbnail = Some(user.image_url.clone());
         result.description = Some(stream.title.clone());

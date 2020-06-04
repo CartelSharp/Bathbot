@@ -147,7 +147,6 @@ joinable!(pp_ctb_mods -> maps (beatmap_id));
 joinable!(pp_mania_mods -> maps (beatmap_id));
 joinable!(stars_ctb_mods -> maps (beatmap_id));
 joinable!(stars_mania_mods -> maps (beatmap_id));
-joinable!(stream_tracks -> twitch_users (user_id));
 
 allow_tables_to_appear_in_same_query!(
     bggame_stats,

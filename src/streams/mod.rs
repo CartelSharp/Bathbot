@@ -1,7 +1,7 @@
 mod mixer;
 mod twitch;
 
-pub use mixer::Constellation as Mixer;
+pub use mixer::{models::Channel as MixerChannel, Mixer};
 pub use twitch::{
     models::{TwitchStream, TwitchUser},
     Twitch,
