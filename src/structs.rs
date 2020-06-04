@@ -2,7 +2,7 @@ use crate::{
     commands::fun::BackGroundGame,
     database::{Guild as GuildDB, MySQL, StreamTrack},
     scraper::Scraper,
-    streams::Twitch,
+    streams::{Mixer, MixerChannel, Twitch},
 };
 
 use chrono::{DateTime, Utc};
@@ -15,6 +15,7 @@ use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
 };
+use tokio::sync::RwLock;
 
 pub struct CommandCounter;
 impl TypeMapKey for CommandCounter {
@@ -81,4 +82,13 @@ impl TypeMapKey for Guilds {
 pub struct BgGames;
 impl TypeMapKey for BgGames {
     type Value = HashMap<ChannelId, BackGroundGame>;
+}
+
+impl TypeMapKey for Mixer {
+    type Value = Mixer;
+}
+
+pub struct MixerChannels;
+impl TypeMapKey for MixerChannels {
+    type Value = Arc<RwLock<HashMap<u64, MixerChannel>>>;
 }

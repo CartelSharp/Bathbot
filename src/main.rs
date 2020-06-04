@@ -6,7 +6,7 @@ mod events;
 pub mod pagination;
 pub mod roppai;
 mod scraper;
-mod streams;
+pub mod streams;
 pub mod structs;
 pub mod util;
 
@@ -17,9 +17,9 @@ extern crate diesel;
 
 use crate::scraper::Scraper;
 use commands::{fun::*, osu::*, streams::*, utility::*};
-use database::MySQL;
+use database::{MySQL, Platform};
 use events::Handler;
-use streams::Twitch;
+use streams::{Mixer, Twitch};
 use structs::Osu;
 use structs::*;
 pub use util::{discord::get_member, Error};
@@ -34,7 +34,10 @@ use serenity::{
         StandardFramework,
     },
     http::Http,
-    model::channel::{Channel, Message},
+    model::{
+        channel::{Channel, Message},
+        id::{ChannelId, MessageId, RoleId},
+    },
     prelude::*,
 };
 use std::{
@@ -44,7 +47,7 @@ use std::{
 };
 
 // Will create an async worker to regularly check for online twitch streams
-pub const WITH_STREAM_TRACK: bool = false;
+pub const WITH_STREAM_TRACK: bool = true;
 // Will make the scraper use the osu_session cookie of an osu! account
 pub const WITH_SCRAPER: bool = false;
 
@@ -97,7 +100,15 @@ async fn main() {
         .await
         .unwrap_or_else(|why| panic!("Could not create Scraper: {}", why));
 
-    // Stream tracking
+    // Reaction tracking
+    let reaction_tracker: HashMap<_, _> = mysql
+        .get_role_assigns()
+        .expect("Could not get role assigns")
+        .into_iter()
+        .map(|((c, m), r)| ((ChannelId(c), MessageId(m)), RoleId(r)))
+        .collect();
+
+    // Twitch tracking, Mixer tracking happens in events.rs
     let twitch_users = mysql
         .get_twitch_users()
         .unwrap_or_else(|why| panic!("Could not get twitch_users: {}", why));
@@ -188,6 +199,7 @@ async fn main() {
         }
         data.insert::<Guilds>(guilds);
         data.insert::<BgGames>(HashMap::new());
+        data.insert::<ReactionTracker>(reaction_tracker);
     }
 
     // Boot it all up

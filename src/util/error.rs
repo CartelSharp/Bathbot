@@ -1,5 +1,6 @@
 use crate::roppai::OppaiErr;
 
+use async_tungstenite::tungstenite::Error as TungsteniteError;
 use chrono::format::ParseError as ParseChrono;
 use diesel::result::Error as DieselError;
 use image::ImageError;
@@ -26,6 +27,13 @@ pub enum Error {
     ImageError(ImageError),
     Serde(SerdeError),
     InvalidHeaderValue(InvalidHeaderValue),
+    TungsteniteError(TungsteniteError),
+}
+
+impl From<TungsteniteError> for Error {
+    fn from(e: TungsteniteError) -> Self {
+        Self::TungsteniteError(e)
+    }
 }
 
 impl From<InvalidHeaderValue> for Error {
@@ -124,6 +132,7 @@ impl fmt::Display for Error {
             Self::ImageError(e) => write!(f, "{}", e),
             Self::Serde(e) => write!(f, "{}", e),
             Self::InvalidHeaderValue(e) => write!(f, "{}", e),
+            Self::TungsteniteError(e) => write!(f, "{}", e),
         }
     }
 }

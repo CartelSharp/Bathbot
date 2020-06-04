@@ -1,5 +1,8 @@
-mod models;
+mod mixer;
 mod twitch;
 
-pub use models::{TwitchStream, TwitchUser};
-pub use twitch::*;
+pub use mixer::{models::Channel as MixerChannel, Mixer};
+pub use twitch::{
+    models::{TwitchStream, TwitchUser},
+    Twitch,
+};

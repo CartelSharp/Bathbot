@@ -3,6 +3,5 @@ CREATE TABLE stream_tracks (
     channel_id BIGINT UNSIGNED NOT NULL,
     user_id BIGINT UNSIGNED NOT NULL,
     platform TINYINT UNSIGNED NOT NULL,
-    PRIMARY KEY (id),
-    FOREIGN KEY (user_id) REFERENCES twitch_users(user_id)
+    PRIMARY KEY (id)
 )

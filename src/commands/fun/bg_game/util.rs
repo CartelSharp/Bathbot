@@ -8,6 +8,7 @@ use std::{collections::VecDeque, fs, path::PathBuf, str::FromStr, sync::Arc};
 
 pub fn get_random_filename(
     previous_ids: &mut VecDeque<u32>,
+    osu_std: bool,
     path: &PathBuf,
 ) -> Result<String, Error> {
     let mut files: Vec<String> = fs::read_dir(path)?
@@ -32,7 +33,7 @@ pub fn get_random_filename(
         let id = u32::from_str(file.split('.').next().unwrap()).unwrap();
         if !previous_ids.contains(&id) {
             previous_ids.push_front(id);
-            if previous_ids.len() > 50 {
+            if (osu_std && previous_ids.len() > 500) || (!osu_std && previous_ids.len() > 100) {
                 previous_ids.pop_back();
             }
             return Ok(file);
@@ -62,7 +63,7 @@ pub async fn get_title_artist(
     }?;
     if title.contains('(') && title.contains(')') {
         let idx_open = title.find('(').unwrap();
-        let idx_close = title.find(')').unwrap();
+        let idx_close = title.rfind(')').unwrap();
         title.replace_range(idx_open..=idx_close, "");
     }
     if let Some(idx) = title.find("feat.").or_else(|| title.find("ft.")) {

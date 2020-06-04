@@ -1,8 +1,10 @@
-use super::models::{TwitchStream, TwitchStreams, TwitchUser, TwitchUsers};
+pub mod models;
+
 use crate::util::{
     globals::{TWITCH_STREAM_ENDPOINT, TWITCH_USERS_ENDPOINT},
     Error, RateLimiter,
 };
+use models::{TwitchStream, TwitchStreams, TwitchUser, TwitchUsers};
 
 use rayon::prelude::*;
 use reqwest::{

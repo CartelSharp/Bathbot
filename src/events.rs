@@ -1,7 +1,7 @@
 use crate::{
     database::{MySQL, Platform},
     embeds::BasicEmbedData,
-    streams::{Twitch, TwitchStream},
+    streams::{Mixer, Twitch, TwitchStream},
     structs::{Guilds, OnlineTwitch, ReactionTracker, StreamTracks},
     util::discord::get_member,
     WITH_STREAM_TRACK,
@@ -16,13 +16,14 @@ use serenity::{
         event::ResumedEvent,
         gateway::{Activity, Ready},
         guild::Guild,
-        id::{ChannelId, GuildId, MessageId, RoleId},
+        id::{ChannelId, GuildId, RoleId},
         voice::VoiceState,
     },
     prelude::*,
 };
 use std::{
     collections::{HashMap, HashSet},
+    env,
     sync::{Arc, Once},
 };
 use strfmt::strfmt;
@@ -35,43 +36,46 @@ pub struct Handler;
 #[async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, ready: Ready) {
+        // Tracking streams
+        let mut track_streams = false;
         START.call_once(|| {
-            // Tracking streams
-            if WITH_STREAM_TRACK {
-                let http = ctx.http.clone();
-                let data = ctx.data.clone();
-                let _ = tokio::spawn(async move {
-                    let track_delay = 10;
-                    let mut interval = time::interval(time::Duration::from_secs(track_delay * 60));
-                    interval.tick().await;
-                    loop {
-                        _check_streams(&http, Arc::clone(&data).clone()).await;
-                        interval.tick().await;
-                    }
-                });
-                info!("Stream tracking started");
-            } else {
-                info!("Stream tracking skipped");
-            }
+            track_streams = true;
         });
-
-        // Tracking reactions
-        {
-            let mut data = ctx.data.write().await;
-            match data.get::<MySQL>() {
-                Some(mysql) => {
-                    let reaction_tracker: HashMap<_, _> = mysql
-                        .get_role_assigns()
-                        .expect("Could not get role assigns")
-                        .into_iter()
-                        .map(|((c, m), r)| ((ChannelId(c), MessageId(m)), RoleId(r)))
-                        .collect();
-                    {
-                        data.insert::<ReactionTracker>(reaction_tracker);
-                    }
-                }
-                None => warn!("Could not get MySQL for reaction_tracker"),
+        if track_streams && WITH_STREAM_TRACK {
+            let mixer_tracks: Vec<_> = {
+                let data = ctx.data.read().await;
+                data.get::<MySQL>()
+                    .expect("Could not get MySQL")
+                    .get_stream_tracks()
+                    .unwrap_or_else(|why| panic!("Could not get stream_tracks: {}", why))
+                    .iter()
+                    .filter(|track| track.platform == Platform::Mixer)
+                    .map(|track| track.user_id)
+                    .collect()
+            };
+            let mixer_client_id =
+                env::var("MIXER_CLIENT_ID").expect("Could not load MIXER_CLIENT_ID");
+            let mixer = Mixer::new(&mixer_client_id, mixer_tracks, &ctx)
+                .await
+                .expect("Could not initialize Mixer");
+            {
+                let mut data = ctx.data.write().await;
+                data.insert::<Mixer>(mixer);
             }
+            let http = Arc::clone(&ctx.http);
+            let data = Arc::clone(&ctx.data);
+            let _ = tokio::spawn(async move {
+                let track_delay = 10;
+                let mut interval = time::interval(time::Duration::from_secs(track_delay * 60));
+                interval.tick().await;
+                loop {
+                    _check_streams(&http, Arc::clone(&data).clone()).await;
+                    interval.tick().await;
+                }
+            });
+            info!("Stream tracking started");
+        } else {
+            info!("Stream tracking skipped");
         }
 
         if let Some(shard) = ready.shard {
@@ -338,7 +342,7 @@ async fn _check_streams(http: &Http, data: Arc<RwLock<TypeMap>>) {
             for track in stream_tracks {
                 if streams.contains_key(&track.user_id) {
                     let stream = streams.get(&track.user_id).unwrap();
-                    let data = BasicEmbedData::create_twitch_stream_notif(
+                    let data = BasicEmbedData::create_stream_twitch_notif(
                         stream,
                         users.get(&stream.user_id).unwrap(),
                     );
