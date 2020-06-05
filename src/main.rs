@@ -47,7 +47,7 @@ use std::{
 };
 
 // Will create an async worker to regularly check for online twitch streams
-pub const WITH_STREAM_TRACK: bool = true;
+pub const WITH_STREAM_TRACK: bool = false;
 // Will make the scraper use the osu_session cookie of an osu! account
 pub const WITH_SCRAPER: bool = false;
 
@@ -71,7 +71,13 @@ async fn main() {
         .level(LevelFilter::Info)
         .level_for("bathbot", LevelFilter::Debug)
         .chain(std::io::stdout())
-        .chain(fern::log_file("logs.log").expect("Could prepare logs.log file"))
+        .chain(
+            fern::log_file(&format!(
+                "logs/log-{}.log",
+                Utc::now().format("%F-%H-%M-%S").to_string()
+            ))
+            .expect("Could prepare log file"),
+        )
         .apply()
         .expect("Could not prepare fern-logger");
 
