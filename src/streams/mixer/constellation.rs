@@ -27,7 +27,6 @@ pub struct Mixer {
     write: Arc<RwLock<SplitSink<WsStream, Message>>>,
     curr_id: usize,
     channels: ChannelMap,
-    pub http: Option<Arc<Http>>,
     _read_handle: JoinHandle<()>,
     _ping_handle: JoinHandle<()>,
 }
@@ -61,16 +60,11 @@ impl Mixer {
 
         // Start up the async worker that reads websocket messages
         let channels_clone = Arc::clone(&channels);
-        let http_clone = Arc::clone(&ctx.http);
-        let data_clone = Arc::clone(&ctx.data);
+        let http = Arc::clone(&ctx.http);
+        let data = Arc::clone(&ctx.data);
         let _read_handle = tokio::spawn(async move {
             let channels: ChannelMap = channels_clone;
-            let http = http_clone;
-            let data = data_clone;
-            let mut counter: u64 = 0;
             loop {
-                debug!("Loop iter {}", counter);
-                counter = counter.wrapping_add(1);
                 match read.recv_json().await {
                     Ok(Some(SocketResponse::Event(event))) => {
                         if let Some(event_data) = event.data {
@@ -79,12 +73,12 @@ impl Mixer {
                                     .split(':')
                                     .nth(1)
                                     .and_then(|id| u64::from_str(id).ok());
-                                if let Some(id) = id {
-                                    let mut channels = channels.write().await;
-                                    if let Some(ref mut channel) = channels.get_mut(&id) {
-                                        if patch_channel(channel, event_data) {
-                                            send_notifs(&http, &data, channel).await;
-                                        }
+                                let mut channels = channels.write().await;
+                                if let Some(ref mut channel) =
+                                    id.and_then(|id| channels.get_mut(&id))
+                                {
+                                    if patch_channel(channel, event_data) {
+                                        send_notifs(&http, &data, channel).await;
                                     }
                                 }
                             }
@@ -103,6 +97,7 @@ impl Mixer {
             }
         });
 
+        // Start up the async worker that pings regularly
         let write = Arc::new(RwLock::new(write));
         let write_clone = Arc::clone(&write);
         let _ping_handle = tokio::spawn(async move {
@@ -122,10 +117,11 @@ impl Mixer {
             write,
             curr_id: 0,
             channels,
-            http: None,
             _read_handle,
             _ping_handle,
         };
+
+        // Subscribe to all stored channels
         let mut interval = time::interval(time::Duration::from_millis(250));
         let channels: Vec<_> = {
             let channels = result.channels.read().await;
@@ -216,27 +212,13 @@ fn patch_channel(channel: &mut Channel, mut data: Value) -> bool {
                     patch_field!(channel, online, value);
                     return channel.online;
                 }
-                "user" => {
-                    patch_field!(channel, user, value);
-                }
-                "name" => {
-                    patch_field!(channel, title, value);
-                }
-                "bannerUrl" => {
-                    patch_field!(channel, banner_url, value);
-                }
-                "thumbnail" => {
-                    patch_field!(channel, thumbnail, value);
-                }
-                "cover" => {
-                    patch_field!(channel, cover, value);
-                }
-                "badge" => {
-                    patch_field!(channel, badge, value);
-                }
-                "type" => {
-                    patch_field!(channel, game, value);
-                }
+                "user" => patch_field!(channel, user, value),
+                "name" => patch_field!(channel, title, value),
+                "bannerUrl" => patch_field!(channel, banner_url, value),
+                "thumbnail" => patch_field!(channel, thumbnail, value),
+                "cover" => patch_field!(channel, cover, value),
+                "badge" => patch_field!(channel, badge, value),
+                "type" => patch_field!(channel, game, value),
                 _ => {} // Irrelevant event
             }
         }

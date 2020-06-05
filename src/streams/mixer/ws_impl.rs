@@ -39,10 +39,7 @@ pub trait SenderExt {
 impl ReceiverExt for SplitStream<WsStream> {
     async fn recv_json(&mut self) -> Result<Option<SocketResponse>> {
         let ws_message = match timeout(TIMEOUT, self.next()).await {
-            Ok(Some(v)) => {
-                debug!("v: {:?}", v);
-                v.ok()
-            }
+            Ok(Some(v)) => v.ok(),
             Ok(None) => return Err(Error::Custom("WsStream empty".to_string())),
             Err(_) => None,
         };

@@ -40,15 +40,13 @@ In case you want to get the bot running yourself to either modify a custom insta
 - Assign all other variables of the `.env.example` file into your `.env` file
 
 ## Todos
-- Mixer stream tracking
+- Further testing of mixer tracking
 - Allow username provision via discord user mention
 - Update spreadsheet (`<mostplayed`, `pagination`, ...)
 - Automize the bot setup via docker
 - Make `<common` paginated
 - Make `<mpc` paginated
-- Improve mode adaptation for bg game
 - Check on previous id buffer of bg game
 - Improve help msg of bg game
-- Add `Expert` difficulty for `<minesweeper`
   ### Commands
   - None as of now

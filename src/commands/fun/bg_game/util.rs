@@ -2,13 +2,13 @@ use crate::{Error, MySQL, Osu};
 
 use rand::RngCore;
 use rayon::prelude::*;
-use rosu::backend::BeatmapRequest;
+use rosu::{backend::BeatmapRequest, models::GameMode};
 use serenity::prelude::{RwLock, TypeMap};
 use std::{collections::VecDeque, fs, path::PathBuf, str::FromStr, sync::Arc};
 
 pub fn get_random_filename(
     previous_ids: &mut VecDeque<u32>,
-    osu_std: bool,
+    mode: GameMode,
     path: &PathBuf,
 ) -> Result<String, Error> {
     let mut files: Vec<String> = fs::read_dir(path)?
@@ -27,13 +27,18 @@ pub fn get_random_filename(
         .map(|entry| entry.unwrap())
         .collect();
     let mut rng = rand::thread_rng();
+    let buffer_size = match mode {
+        GameMode::STD => 500,
+        GameMode::MNA => 100,
+        _ => unreachable!(),
+    };
     loop {
         let len = files.len();
         let file = files.remove(rng.next_u32() as usize % len);
         let id = u32::from_str(file.split('.').next().unwrap()).unwrap();
         if !previous_ids.contains(&id) {
             previous_ids.push_front(id);
-            if (osu_std && previous_ids.len() > 500) || (!osu_std && previous_ids.len() > 100) {
+            if previous_ids.len() > buffer_size {
                 previous_ids.pop_back();
             }
             return Ok(file);
@@ -74,8 +79,9 @@ pub async fn get_title_artist(
 }
 
 pub fn similarity(word_a: &str, word_b: &str) -> f32 {
-    let len = word_a.len().max(word_b.len());
-    (len - levenshtein_distance(word_a, word_b)) as f32 / len as f32
+    let len = word_a.chars().count().max(word_b.chars().count());
+    let dist = levenshtein_distance(word_a, word_b);
+    (len - dist) as f32 / len as f32
 }
 
 fn levenshtein_distance(word_a: &str, word_b: &str) -> usize {
